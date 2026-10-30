@@ -1,0 +1,228 @@
+// SPDX-FileCopyrightText: 2026 Foundation Devices, Inc. <hello@foundation.xyz>
+// SPDX-License-Identifier: MIT
+
+import {
+    Theme,
+    UISize,
+    Images,
+    ControlSize,
+} from "@ui/theme.slint";
+import { Callbacks } from "callbacks.slint";
+
+export { Callbacks, Theme, Images, ControlSize }
+
+// Doom key codes, mirrored from doomkeys.h (and src/doom.rs).
+global Keys {
+    out property <int> right: 174;
+    out property <int> left: 172;
+    out property <int> up: 173;
+    out property <int> down: 175;
+    out property <int> strafe-l: 160;
+    out property <int> strafe-r: 161;
+    out property <int> use: 162;
+    out property <int> fire: 163;
+    out property <int> escape: 27;
+    out property <int> enter: 13;
+    out property <int> tab: 9;
+    out property <int> next-weapon: 93;
+    out property <int> prev-weapon: 91;
+    out property <int> run: 182;
+}
+
+// The game is played with the device turned so that the portrait screen's
+// right edge is the top. Everything below is laid out in landscape
+// coordinates (800 wide, 480 tall) and mapped onto the 480x800 portrait
+// screen: landscape (lx, ly) is portrait (480 - ly, lx).
+global Landscape {
+    out property <length> height: 480px;
+}
+
+// A translucent touch button that holds its Doom key down while pressed.
+// `label` is a pre-rotated image from resources/images (tools/gen_labels.py).
+component PadButton inherits Rectangle {
+    in property <length> lx;
+    in property <length> ly;
+    in property <length> lw;
+    in property <length> lh;
+    in property <image> label;
+    in property <int> code;
+
+    x: Landscape.height - root.ly - root.lh;
+    y: root.lx;
+    width: root.lh;
+    height: root.lw;
+
+    background: touch.pressed ? #c8321ea0 : #00000060;
+    border-radius: 12px;
+    border-width: 2px;
+    border-color: touch.pressed ? #ff7a3c : #f2e6d870;
+
+    Image {
+        source: root.label;
+        width: self.source.width * 1px;
+        height: self.source.height * 1px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+    }
+
+    touch := TouchArea {
+        changed pressed => {
+            Callbacks.key(root.code, self.pressed);
+        }
+    }
+}
+
+// KeyOS hands the app a single pointer, so one finger has to do a lot.
+// Drag distances are measured in landscape: a portrait move of (dx, dy) is a
+// landscape move of (dy, -dx).
+global Drag {
+    // Distance before a drag counts as a direction.
+    out property <length> dead-zone: 18px;
+    // Distance at which the joystick also runs.
+    out property <length> run-distance: 70px;
+}
+
+// Floating joystick: put a finger down anywhere in the area and drag. Up and
+// down walk, left and right turn; dragging further runs.
+component Joystick inherits Rectangle {
+    in property <length> lx;
+    in property <length> ly;
+    in property <length> lw;
+    in property <length> lh;
+
+    x: Landscape.height - root.ly - root.lh;
+    y: root.lx;
+    width: root.lh;
+    height: root.lw;
+
+    // Landscape drag since the finger went down.
+    property <length> drag-x: touch.pressed ? touch.mouse-y - touch.pressed-y : 0px;
+    property <length> drag-y: touch.pressed ? touch.pressed-x - touch.mouse-x : 0px;
+    property <bool> forward: root.drag-y < -Drag.dead-zone;
+    property <bool> backward: root.drag-y > Drag.dead-zone;
+    property <bool> turn-left: root.drag-x < -Drag.dead-zone;
+    property <bool> turn-right: root.drag-x > Drag.dead-zone;
+    property <bool> running: abs(root.drag-y) > Drag.run-distance || abs(root.drag-x) > Drag.run-distance;
+
+    changed forward => { Callbacks.key(Keys.up, root.forward); }
+    changed backward => { Callbacks.key(Keys.down, root.backward); }
+    changed turn-left => { Callbacks.key(Keys.left, root.turn-left); }
+    changed turn-right => { Callbacks.key(Keys.right, root.turn-right); }
+    changed running => { Callbacks.key(Keys.run, root.running); }
+
+    property <length> base-radius: 80px;
+    property <length> knob-radius: 34px;
+    property <length> reach: root.base-radius - root.knob-radius;
+
+    Rectangle {
+        width: root.base-radius * 2;
+        height: root.base-radius * 2;
+        x: (root.width - self.width) / 2;
+        y: (root.height - self.height) / 2;
+        border-radius: self.width / 2;
+        background: #00000050;
+        border-width: 2px;
+        border-color: touch.pressed ? #ff7a3c : #f2e6d870;
+    }
+
+    // The knob shows the drag, clamped to the base.
+    Rectangle {
+        width: root.knob-radius * 2;
+        height: root.knob-radius * 2;
+        x: root.width / 2 - root.knob-radius
+            + max(-root.reach, min(root.reach, touch.pressed ? touch.mouse-x - touch.pressed-x : 0px));
+        y: root.height / 2 - root.knob-radius
+            + max(-root.reach, min(root.reach, touch.pressed ? touch.mouse-y - touch.pressed-y : 0px));
+        border-radius: self.width / 2;
+        background: touch.pressed ? #c8321ec0 : #f2e6d860;
+    }
+
+    touch := TouchArea { }
+}
+
+// FIRE: hold to shoot, drag sideways while holding to turn and aim.
+component FireButton inherits Rectangle {
+    in property <length> lx;
+    in property <length> ly;
+    in property <length> lw;
+    in property <length> lh;
+    in property <image> label;
+
+    x: Landscape.height - root.ly - root.lh;
+    y: root.lx;
+    width: root.lh;
+    height: root.lw;
+
+    property <length> drag-x: touch.pressed ? touch.mouse-y - touch.pressed-y : 0px;
+    property <bool> aim-left: root.drag-x < -Drag.dead-zone;
+    property <bool> aim-right: root.drag-x > Drag.dead-zone;
+
+    changed aim-left => { Callbacks.key(Keys.left, root.aim-left); }
+    changed aim-right => { Callbacks.key(Keys.right, root.aim-right); }
+
+    background: touch.pressed ? #c8321ea0 : #5a1c1460;
+    border-radius: 12px;
+    border-width: 2px;
+    border-color: touch.pressed ? #ff7a3c : #f2e6d870;
+
+    Image {
+        source: root.label;
+        width: self.source.width * 1px;
+        height: self.source.height * 1px;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+    }
+
+    touch := TouchArea {
+        changed pressed => {
+            Callbacks.key(Keys.fire, self.pressed);
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    title: "DOOM";
+    preferred-width: UISize.screen-width;
+    preferred-height: UISize.screen-height;
+    background: #000000;
+
+    // The engine's frame, already rotated to portrait (200x320).
+    in property <image> frame;
+    // Set when no IWAD was found; shows how to provide one.
+    in property <bool> missing-wad;
+
+    // 320x200 scaled 2.375x to 760x475 in landscape, right of the status bar.
+    Image {
+        x: Landscape.height - 2px - self.width;
+        y: UISize.control-center-status-bar-height;
+        width: 475px;
+        height: 760px;
+        source: root.frame;
+        image-fit: fill;
+        image-rendering: pixelated;
+    }
+
+    if root.missing-wad: Image {
+        source: Images.image("msg-no-wad");
+        width: self.source.width * 1px;
+        height: self.source.height * 1px;
+        x: (root.width - self.width) / 2;
+        y: (root.height - self.height) / 2;
+    }
+
+    // Top row: menus and weapons.
+    PadButton { lx: 52px;  ly: 8px; lw: 92px;  lh: 52px; label: Images.image("lbl-menu"); code: Keys.escape; }
+    PadButton { lx: 152px; ly: 8px; lw: 80px;  lh: 52px; label: Images.image("lbl-map"); code: Keys.tab; }
+    PadButton { lx: 240px; ly: 8px; lw: 100px; lh: 52px; label: Images.image("lbl-enter"); code: Keys.enter; }
+    PadButton { lx: 588px; ly: 8px; lw: 96px;  lh: 52px; label: Images.image("lbl-wpn-prev"); code: Keys.prev-weapon; }
+    PadButton { lx: 692px; ly: 8px; lw: 100px; lh: 52px; label: Images.image("lbl-wpn-next"); code: Keys.next-weapon; }
+
+    // Movement, bottom left.
+    Joystick { lx: 52px; ly: 150px; lw: 300px; lh: 326px; }
+
+    // Actions, bottom right.
+    PadButton { lx: 540px; ly: 290px; lw: 50px;  lh: 82px;  label: Images.image("lbl-strafe-l"); code: Keys.strafe-l; }
+    PadButton { lx: 594px; ly: 290px; lw: 50px;  lh: 82px;  label: Images.image("lbl-strafe-r"); code: Keys.strafe-r; }
+    PadButton { lx: 540px; ly: 380px; lw: 104px; lh: 90px;  label: Images.image("lbl-use"); code: Keys.use; }
+    FireButton { lx: 652px; ly: 300px; lw: 140px; lh: 170px; label: Images.image("lbl-fire"); }
+}

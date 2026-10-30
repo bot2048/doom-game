@@ -1,0 +1,12 @@
+target/
+.foundation-sdk/
+ui/ui
+manifest.toml
+
+# Agent skills copied from the SDK; reinstall with `foundation skills`.
+.claude/
+.agents/
+
+# Game data. Fetch with tools/fetch_wad.sh (or bring your own IWAD).
+wad/*.wad
+wad/*.WAD

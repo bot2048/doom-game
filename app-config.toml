@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 Foundation Devices, Inc. <hello@foundation.xyz>
+# SPDX-License-Identifier: MIT
+
+# Foundation application configuration
+app-name = "doom"
+friendly-app-name = "DOOM"
+launcher-app-name = "DOOM"
+description = "DOOM for Passport Prime"
+icon = "resources/icon.svg"
+theme = "resources/theme.json"
+app-id = "0xfc9b8a9f8669e318446ca4fee4bf61bc"
+min-keyos-version = "1.4.0"
+
+[publisher]
+name = "bitmela"
+contact-email = "dev@example.com"
+support-url = "https://example.com"
+
+[permissions]
+# fs-generic: config and savegames in AppData. Airlock read access: the WAD is
+# copied onto the Airlock over USB (KeyOS asks the user on first use).
+template = ["gui-app", "fs-generic"]
+"os/fs" = [
+    "GetAirlockReadAccess",
+]
