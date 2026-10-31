@@ -45,7 +45,10 @@ static UI: OnceLock<slint::Weak<AppWindow>> = OnceLock::new();
 /// frames instead of building a backlog.
 static FRAME_PENDING: AtomicBool = AtomicBool::new(false);
 
-/// Doom key codes from doomkeys.h that the on-screen controls send.
+/// Doom key codes from doomkeys.h that the on-screen controls send. On
+/// device, the Rust side only uses the few it re-binds; the simulator's
+/// script player (src/sim_debug.rs) uses the rest.
+#[cfg_attr(target_os = "xous", allow(dead_code))]
 pub mod keys {
     pub const RIGHT: u8 = 0xae;
     pub const LEFT: u8 = 0xac;

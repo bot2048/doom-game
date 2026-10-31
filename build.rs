@@ -83,7 +83,8 @@ fn build_doom() {
         .opt_level(2)
         .warnings(false)
         .flag_if_supported("-w")
-        .file("csrc/w_file_rust.c");
+        .file("csrc/w_file_rust.c")
+        .file("csrc/dg_haptics.c");
     for src in DOOM_SOURCES {
         build.file(format!("{DOOM_DIR}/{src}"));
     }

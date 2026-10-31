@@ -4,6 +4,7 @@
 mod buffered;
 mod doom;
 mod files;
+mod haptics;
 mod libc;
 #[cfg(not(target_os = "xous"))]
 mod sim_debug;

@@ -19,13 +19,14 @@ yet.
 1. [Prerequisites](#prerequisites)
 2. [Quick start (simulator)](#quick-start-simulator)
 3. [Controls](#controls)
-4. [Running on a Passport Prime](#running-on-a-passport-prime)
-5. [Tests](#tests)
-6. [Debugging aids](#debugging-aids)
-7. [How it works](#how-it-works)
-8. [Project layout](#project-layout)
-9. [Troubleshooting](#troubleshooting)
-10. [Licensing](#licensing)
+4. [Sound and vibration](#sound-and-vibration)
+5. [Running on a Passport Prime](#running-on-a-passport-prime)
+6. [Tests](#tests)
+7. [Debugging aids](#debugging-aids)
+8. [How it works](#how-it-works)
+9. [Project layout](#project-layout)
+10. [Troubleshooting](#troubleshooting)
+11. [Licensing](#licensing)
 
 ## Prerequisites
 
@@ -92,6 +93,32 @@ KeyOS gives apps a single pointer, so everything is designed for one finger
 Saving: MENU, Save Game, pick a slot, ENTER, ENTER. Empty slots are named
 "SAVE n" automatically (there is no keyboard).
 
+## Sound and vibration
+
+KeyOS has no audio output for apps, so the game is silent. Doom's sound
+code is compiled out (`FEATURE_SOUND` is not defined), and the SDK has no
+API for playing sound. Instead, the events you would hear most are turned
+into vibration through the KeyOS haptics API:
+
+| Event | Vibration |
+|---|---|
+| Pistol, chaingun, fist | short sharp click |
+| Shotguns, rocket launcher, BFG | strong click |
+| Plasma rifle | light tick |
+| Chainsaw | soft buzz |
+| Taking damage | double click |
+| Dying | long alert |
+| Item, weapon, powerup pickups | soft bumps, a double click for powerups |
+| Opening and confirming menus | light tick |
+
+Each kind is rate-limited so rapid fire doesn't become one continuous buzz.
+Only sounds made by you count; enemy gunfire and title-screen demos don't
+vibrate. To turn vibration off, set **Options > Sound Volume > SFX Volume**
+to 0 (the setting is saved).
+
+The simulator has no vibration motor: there, each vibration is logged as
+`haptic: <pattern>` instead.
+
 ## Running on a Passport Prime
 
 You need a Passport Prime on the KeyOS 1.4 beta with **Developer Mode**
@@ -153,7 +180,9 @@ These could not be verified without a device:
 - performance (`fps:` log lines) and memory (Doom reserves 6 MB for its zone);
 - the 2 MB stack of the engine thread (`DOOM_STACK_SIZE` in `src/doom.rs`);
 - reading the 28 MB WAD from the Airlock, and whether the KeyOS status bar
-  overlaps the left edge of the game.
+  overlaps the left edge of the game;
+- how the vibration patterns feel, and whether their rate limits in
+  `src/haptics.rs` need tuning.
 
 ## Tests
 
@@ -181,7 +210,7 @@ Simulator-only environment variables (see `src/sim_debug.rs`):
 | `DOOM_ARGS="-warp 1 1"` | Extra engine arguments. |
 | `DOOM_FRAME_DUMP=<file.ppm>` | Writes the current frame about once a second. |
 | `DOOM_SNAP_DIR=<dir>` | Where `@name` script steps write `<name>.ppm`. |
-| `DOOM_SCRIPT="..."` | Timed input: `<ms>*key` tap, `<ms>+key` / `<ms>-key` hold / release, `<ms>@name` snapshot. Keys: `enter esc up down left right fire use tab strafel strafer f2 f3` or one character. |
+| `DOOM_SCRIPT="..."` | Timed input: `<ms>*key` tap, `<ms>+key` / `<ms>-key` hold / release, `<ms>@name` snapshot. Keys: `enter esc up down left right fire use tab strafel strafer f2 f3 f4` or one character. |
 
 Example: start a new game, fire, and take a snapshot:
 
@@ -211,10 +240,15 @@ Frames are stored rotated (portrait). Rotate them 90° counterclockwise to view.
   table above). Every KeyOS file call is an IPC message, and the engine reads
   and writes savegames one byte at a time, so `src/buffered.rs` batches reads
   and writes and tracks the file position locally.
-- **Engine changes.** Two small patches to the vendored engine, both marked
+- **Haptics.** `s_sound.c` calls `DG_SoundHook` (`csrc/dg_haptics.c`) for
+  every sound the game starts. It picks out the player's own sounds and
+  hands them to `src/haptics.rs`, which sends rate-limited KeyOS haptic
+  patterns.
+- **Engine changes.** Three small patches to the vendored engine, all marked
   "Passport port": `m_config.c` loads and saves settings when
-  `DG_PERSIST_CONFIG` is defined (doomgeneric compiles that out), and
-  `m_menu.c` names an empty save slot "SAVE n". `src/doom.rs` also re-binds the
+  `DG_PERSIST_CONFIG` is defined (doomgeneric compiles that out),
+  `m_menu.c` names an empty save slot "SAVE n", and `s_sound.c` calls the
+  haptics hook. `src/doom.rs` also re-binds the
   keys the touch UI sends after the config loads, because the config format
   cannot store some of them.
 
@@ -230,17 +264,19 @@ Frames are stored rotated (portrait). Rotate them 90° counterclockwise to view.
 | `src/files.rs` | KeyOS file access, IWAD discovery. |
 | `src/buffered.rs` | Buffered, position-tracking file handle (unit tested). |
 | `src/libc.rs` | Rust side of the libc shim: allocator, console, files, exit. |
+| `src/haptics.rs` | Vibration patterns and rate limits for game events. |
 | `src/sim_debug.rs` | Simulator-only scripted input and frame snapshots. |
 | `src/theme.rs` | Theme wiring from the SDK template. |
 | `csrc/libc_shim.c` | C library subset for the engine. |
 | `csrc/dg_libc.h` | Force-included header: newlib macro fixes (device), `shim_*` renames (simulator). |
 | `csrc/w_file_rust.c` | Engine WAD backend that streams through `src/files.rs`. |
+| `csrc/dg_haptics.c` | Picks which game sounds become vibrations. |
 | `ui/app.slint`, `ui/callbacks.slint` | Game view and touch controls. |
 | `resources/` | App icon, theme, pre-rotated button labels. |
 | `tools/fetch_wad.sh` | Downloads and verifies Freedoom. |
 | `tools/gen_labels.py` | Regenerates the button label images. |
 | `tests/` | libc shim tests. |
-| `vendor/doomgeneric/` | The engine (upstream, plus the two patches above). |
+| `vendor/doomgeneric/` | The engine (upstream, plus the three patches above). |
 | `wad/` | Game data (not in git) and the Freedoom license. |
 | `AGENTS.md`, `.mcp.json`, `permission_templates.toml` | From the SDK template: agent notes, the `passport-drive` MCP server, permission bundles. |
 

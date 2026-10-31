@@ -8,7 +8,7 @@
 //!   without touching the screen. Each step is `<ms><op><arg>`, timed from
 //!   engine start: `*key` taps a key, `+key` / `-key` press and release it,
 //!   `@name` saves the next frame as `<DOOM_SNAP_DIR>/<name>.ppm`.
-//!   Keys: enter esc up down left right fire use tab strafel strafer f2 f3,
+//!   Keys: enter esc up down left right fire use tab strafel strafer f2 f3 f4,
 //!   or any single character. Example: `DOOM_SCRIPT="3000*enter 3500@menu"`.
 
 use std::sync::Mutex;
@@ -35,6 +35,7 @@ fn key_code(name: &str) -> Option<u8> {
         "strafer" => keys::STRAFE_R,
         "f2" => 0x80 + 0x3c,
         "f3" => 0x80 + 0x3d,
+        "f4" => 0x80 + 0x3e,
         _ if name.len() == 1 => name.as_bytes()[0],
         _ => return None,
     })

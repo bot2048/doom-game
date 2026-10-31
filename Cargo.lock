@@ -1109,6 +1109,7 @@ version = "0.1.0"
 dependencies = [
  "cc",
  "foundation-themes",
+ "haptics",
  "log",
  "server",
  "slint-keyos-platform",
@@ -1800,6 +1801,17 @@ dependencies = [
  "cfg-if",
  "crunchy",
  "zerocopy",
+]
+
+[[package]]
+name = "haptics"
+version = "1.0.0"
+dependencies = [
+ "log",
+ "num-derive",
+ "num-traits",
+ "server",
+ "xous",
 ]
 
 [[package]]

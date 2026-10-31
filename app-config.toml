@@ -23,3 +23,7 @@ template = ["gui-app", "fs-generic"]
 "os/fs" = [
     "GetAirlockReadAccess",
 ]
+# Vibration in place of sound (KeyOS has no audio output for apps).
+"os/haptics" = [
+    "Vibrate",
+]
