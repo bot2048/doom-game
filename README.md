@@ -38,8 +38,9 @@ This works on any Passport Prime running KeyOS 1.4.0 or newer (the version is
 shown under **Settings > About**). You need a computer and a USB-C cable. You
 do not need to build anything.
 
-**1. Download these three files** from the
-[latest release](https://github.com/bot2048/doom-game/releases/latest):
+**1. Download the zip file** (for example `doom-0.1.0.zip`) from the
+[latest release](https://github.com/bot2048/doom-game/releases/latest) and
+unzip it. It holds these files:
 
 | File | What it is |
 |---|---|
@@ -49,8 +50,8 @@ do not need to build anything.
 
 **2. Copy them to the Passport.** Connect the Passport to your computer with
 the USB-C cable and set the Airlock to **Read/Write** on the Passport. The
-Airlock then shows up on your computer as a USB drive. Copy all three files to
-the top level of that drive (not into a folder), eject the drive, and unplug
+Airlock then shows up on your computer as a USB drive. Copy the `.app`, `.crt`
+and `.wad` files to the top level of that drive (not into a folder), eject the drive, and unplug
 the cable. A USB stick plugged into the Passport also works for the `.app` and
 `.crt` files, but the game data has to be on the Airlock.
 
