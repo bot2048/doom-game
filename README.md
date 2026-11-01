@@ -10,25 +10,87 @@ DOOM running as a native app on the [Foundation Passport Prime](https://foundati
   `doom2.wad`, ...).
 
 **Status:** plays fully in the KeyOS simulator: menus, movement, combat,
-weapons, automap, save/load, settings that survive a restart, quitting. The
-device build compiles and links. It has not been signed or run on real hardware
-yet.
+weapons, automap, save/load, settings that survive a restart, quitting. A
+signed build is available on the
+[releases page](https://github.com/bot2048/doom-game/releases/latest). It has
+not been tested on a real Passport yet, so please
+[open an issue](https://github.com/bot2048/doom-game/issues) if something does
+not work.
 
 ## Contents
 
-1. [Prerequisites](#prerequisites)
-2. [Quick start (simulator)](#quick-start-simulator)
-3. [Controls](#controls)
-4. [Sound and vibration](#sound-and-vibration)
-5. [Running on a Passport Prime](#running-on-a-passport-prime)
-6. [Tests](#tests)
-7. [Debugging aids](#debugging-aids)
-8. [How it works](#how-it-works)
-9. [Project layout](#project-layout)
-10. [Troubleshooting](#troubleshooting)
-11. [Licensing](#licensing)
+1. [Install on your Passport](#install-on-your-passport)
+2. [Controls](#controls)
+3. [Sound and vibration](#sound-and-vibration)
+4. [Building it yourself](#building-it-yourself)
+5. [Quick start (simulator)](#quick-start-simulator)
+6. [Building for a Passport Prime](#building-for-a-passport-prime)
+7. [Tests](#tests)
+8. [Debugging aids](#debugging-aids)
+9. [How it works](#how-it-works)
+10. [Project layout](#project-layout)
+11. [Troubleshooting](#troubleshooting)
+12. [Licensing](#licensing)
 
-## Prerequisites
+## Install on your Passport
+
+This works on any Passport Prime running KeyOS 1.4.0 or newer (the version is
+shown under **Settings > About**). You need a computer and a USB-C cable. You
+do not need to build anything.
+
+**1. Download these three files** from the
+[latest release](https://github.com/bot2048/doom-game/releases/latest):
+
+| File | What it is |
+|---|---|
+| `doom.app` | the app |
+| `arpan-jain.crt` | the publisher certificate, which tells your Passport who made the app |
+| `freedoom1.wad` | the game data ([Freedoom](https://freedoom.github.io), free to share) |
+
+**2. Copy them to the Passport.** Connect the Passport to your computer with
+the USB-C cable and set the Airlock to **Read/Write** on the Passport. The
+Airlock then shows up on your computer as a USB drive. Copy all three files to
+the top level of that drive (not into a folder), eject the drive, and unplug
+the cable. A USB stick plugged into the Passport also works for the `.app` and
+`.crt` files, but the game data has to be on the Airlock.
+
+**3. Allow the publisher (once).** On the Passport, open
+**Settings > Apps > Allowed Publishers > Add Publisher** and pick
+`arpan-jain.crt`. Check that the fingerprint on screen is exactly
+
+```text
+85a3e6b06f8c4b4f8e27ee5bea8af8311e38bfd0cd55f61b6ab5997eb1651908
+```
+
+(short form `85a3e6b0…b1651908`), then tap **Allow this Publisher**. KeyOS
+warns that Foundation has not verified this publisher. It shows that warning
+for every app Foundation did not make. If you already allowed this publisher
+for [Sanctm](https://github.com/bot2048/sanctm), skip this step.
+
+**4. Install the app.** Open **Settings > Apps > Install App** and pick
+`doom.app`. DOOM appears in the launcher.
+
+**5. Play.** Open DOOM and turn the Passport sideways: the game is drawn in
+landscape, with the top of the game along the right edge of the screen in
+portrait. The first time, KeyOS asks whether DOOM may read Airlock files;
+choose **Always Allow**, because the game reads `freedoom1.wad` from there
+every time it starts. Leave the file on the Airlock. If the game shows
+"No WAD file found", the file is missing from the top level of the Airlock or
+the access was declined.
+
+Any other Doom game file works the same way: copy `doom1.wad` (the free
+shareware episode), `doom.wad`, `doom2.wad`, `plutonia.wad` or `tnt.wad` to the
+Airlock. If several are present, `freedoom1.wad` is used first.
+
+**Updating.** Download the newer `doom.app` and install it the same way. Your
+saves and settings are kept.
+
+## Building it yourself
+
+Everything below is for building the app from source. To just play it, use
+[Install on your Passport](#install-on-your-passport).
+
+### Prerequisites
 
 - Linux x86_64 (the SDK also ships for macOS; these steps were run on Ubuntu).
 - The **Foundation SDK** (tested with 1.1.0, KeyOS 1.4 target), installed so
@@ -57,7 +119,7 @@ foundation develop
 ## Quick start (simulator)
 
 ```bash
-git clone https://github.com/<you>/doom-game.git
+git clone https://github.com/bot2048/doom-game.git
 cd doom-game
 tools/fetch_wad.sh        # downloads and verifies wad/freedoom1.wad
 foundation develop        # enter the SDK shell (once per terminal)
@@ -119,10 +181,10 @@ to 0 (the setting is saved).
 The simulator has no vibration motor: there, each vibration is logged as
 `haptic: <pattern>` instead.
 
-## Running on a Passport Prime
+## Building for a Passport Prime
 
-You need a Passport Prime on the KeyOS 1.4 beta with **Developer Mode**
-enabled (Settings > Apps > Developer Mode).
+This sideloads your own build over USB, which needs **Developer Mode** on the
+Passport (Settings > Apps > Developer Mode).
 
 1. **Linux only, once:** let your user talk to the device over USB. The rules
    file is in the SDK root that `foundation doctor` prints (by default
@@ -131,12 +193,16 @@ enabled (Settings > Apps > Developer Mode).
    sudo cp ~/.foundation/sdk/current/share/99-passport.rules /etc/udev/rules.d/
    sudo udevadm control --reload && sudo udevadm trigger
    ```
-2. **Once:** create a publisher signing identity, then name it in
-   `app-config.toml` (`signing-identity = "<name>"`). Also update the
-   `[publisher]` block, which still holds placeholders.
+2. **Once:** create your own publisher signing identity, then put its name in
+   `app-config.toml` (`signing-identity = "<name>"`) and your details in the
+   `[publisher]` block. The identity in this repository belongs to the
+   maintainer, and its private key is not published.
    ```bash
    foundation cert gen <name>
    ```
+   A Passport treats an app signed by a different publisher as a different
+   app, so your build will not install over the released `doom.app`. Remove
+   the released one first.
 3. **Once per device:** allow your publisher certificate on the Passport.
    Compare the fingerprint on screen with the one `cert gen` printed.
    ```bash
@@ -146,10 +212,8 @@ enabled (Settings > Apps > Developer Mode).
    ```bash
    foundation sideload --release
    ```
-5. Put the game data on the device: connect the Passport, set **Airlock** to
-   Read/Write, and copy `wad/freedoom1.wad` (or your own IWAD) to the root of
-   the Airlock drive. On first launch KeyOS asks to let DOOM read the Airlock;
-   choose **Always Allow**.
+5. Copy `wad/freedoom1.wad` (or your own IWAD) to the top level of the
+   Airlock, as in [Install on your Passport](#install-on-your-passport).
 6. Watch the logs while you play:
    ```bash
    foundation logs
@@ -158,7 +222,8 @@ enabled (Settings > Apps > Developer Mode).
 
 To get an installable file instead of sideloading, run
 `foundation pack --release` (after step 2). It writes
-`target/keyos/doom.app`, which can be installed from the device's Settings.
+`target/keyos/doom.app`, which installs from **Settings > Apps > Install App**
+without Developer Mode.
 
 ### Where the app looks for files on the device
 
@@ -297,7 +362,7 @@ reinstalls them).
 - **The simulator keeps running after you close its terminal.** Stop it with
   `pkill -f '[k]eyos/simulator/'`.
 - **`foundation build` stops with "No signing identity is configured".** See
-  step 2 of [Running on a Passport Prime](#running-on-a-passport-prime).
+  step 2 of [Building for a Passport Prime](#building-for-a-passport-prime).
   Everything before signing has already built.
 
 ## Licensing
